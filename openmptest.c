@@ -1,4 +1,4 @@
-#include <omp.h>
+#include "/opt/homebrew/Cellar/libomp/16.0.1/include/omp.h"
 #include <stdio.h>
 #include <stdlib.h>
  
