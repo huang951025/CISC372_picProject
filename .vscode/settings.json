@@ -12,6 +12,7 @@
         "chrono": "c",
         "compare": "c",
         "cstddef": "c",
-        "stb_image_write.h": "c"
+        "stb_image_write.h": "c",
+        "stdint.h": "c"
     }
 }
