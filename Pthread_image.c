@@ -1,7 +1,7 @@
 #include <pthread.h>
 // A normal C function that is executed as a thread 
 // when its name is specified in pthread_create()
-
+#include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
