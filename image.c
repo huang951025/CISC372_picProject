@@ -4,6 +4,7 @@
 // when its name is specified in pthread_create()
 
 #include <stdio.h>
+#include <stdint.h>
 #include <time.h>
 #include <string.h>
 #include "image.h"
