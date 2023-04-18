@@ -79,11 +79,9 @@ struct thd_arg{
 void *myThreadFun(void *arg)
 {
     struct thd_arg *a = (struct thd_arg*)arg;
-    sleep(1);
     int row,pix,bit,span;
     Image *srcImage = (*a).srcimage;
     Image *destImage = (*a).destimage;
-
     span=srcImage->bpp*srcImage->bpp;
     for (row=(*a).startrow;row<(*a).endrow;row++){
         for (pix=0;pix<srcImage->width;pix++){
@@ -137,15 +135,15 @@ int main(int argc,char** argv)
             thread_arg[i].endrow = (i+1)*perjob-1;
         }
     }
-    printf("total rows:%d \n", srcImage.height);
+    //printf("total rows:%d \n", srcImage.height);
     for (i = 0; i < thread_count;i++){
-        printf("number of thread: %d start:%d end:%d\n",i,thread_arg[i].startrow,thread_arg[i].endrow);
+       //printf("number of thread: %d start:%d end:%d\n",i,thread_arg[i].startrow,thread_arg[i].endrow);
         pthread_create(&thread_id[i], NULL, myThreadFun, &thread_arg[i]);
     }
     for (i = 0; i < thread_count;i++){
         pthread_join(thread_id[i], NULL);
     }
-    printf("After Thread\n");
+    //SSSSprintf("After Thread\n");
 
     stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
     stbi_image_free(srcImage.data);
