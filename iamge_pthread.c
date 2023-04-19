@@ -2,10 +2,9 @@
 #include <pthread.h>
 // A normal C function that is executed as a thread 
 // when its name is specified in pthread_create()
-
 #include <stdio.h>
 #include <stdint.h>
-#include <time.h>
+#include <sys/time.h>
 #include <string.h>
 #include "image.h"
 
@@ -14,6 +13,7 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
 
 //An array of kernel matrices to be used for image convolution.  
 //The indexes of these match the enumeration from the header file. ie. algorithms[BLUR] returns the kernel corresponding to a box blur.
@@ -96,9 +96,8 @@ void *myThreadFun(void *arg)
 
 int main(int argc,char** argv)
 {   
-    long t1,t2;
-    t1=time(NULL);
-
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
     stbi_set_flip_vertically_on_load(0); 
     if (argc!=3) return Usage();
     char* fileName=argv[1];
@@ -118,11 +117,12 @@ int main(int argc,char** argv)
     destImage.width=srcImage.width;
     destImage.data=malloc(sizeof(uint8_t)*destImage.width*destImage.bpp*destImage.height);
 
-    int thread_count = 30;
+    int thread_count = 4;
     int i;
     pthread_t thread_id [thread_count];
     struct thd_arg thread_arg[thread_count];
     int perjob = srcImage.height/thread_count;
+    printf("number of core:%d\n",thread_count);
 
     for (i = 0; i < thread_count;i++){
         thread_arg[i].srcimage = &srcImage;
@@ -141,11 +141,15 @@ int main(int argc,char** argv)
     for (i = 0; i < thread_count;i++){
         pthread_join(thread_id[i], NULL);
     }
+    gettimeofday(&end,NULL);
+    if (end.tv_usec >= start.tv_usec){
+        printf("time:%ld.%d",end.tv_sec-start.tv_sec,end.tv_usec-start.tv_usec);
+    }else{
+        printf("time:%ld.%d",end.tv_sec-start.tv_sec-1,1000000-end.tv_usec-start.tv_usec); 
+    }
 
     stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
     stbi_image_free(srcImage.data);
     free(destImage.data);
-    t2=time(NULL);
-    printf("Took %ld seconds\n",t2-t1);
     return 0;
 }
