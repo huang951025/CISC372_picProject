@@ -3,8 +3,8 @@
 #include <sys/time.h>
 #include <string.h>
 #include "image.h"
-#include "opm.h"
-
+#include "/opt/homebrew/Cellar/libomp/16.0.1/include/omp.h"
+//use  #include "omp.h"  if using non apple silicon
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
