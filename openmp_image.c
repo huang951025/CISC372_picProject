@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <time.h>
+#include <sys/time.h>
 #include <string.h>
 #include "image.h"
 #include "/opt/homebrew/Cellar/libomp/16.0.1/include/omp.h"
@@ -94,8 +94,9 @@ enum KernelTypes GetKernelType(char* type){
 //main:
 //argv is expected to take 2 arguments.  First is the source file name (can be jpg, png, bmp, tga).  Second is the lower case name of the algorithm.
 int main(int argc,char** argv){
-    long t1,t2;
-    t1=time(NULL);
+
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
 
     stbi_set_flip_vertically_on_load(0); 
     if (argc!=3) return Usage();
@@ -116,11 +117,17 @@ int main(int argc,char** argv){
     destImage.width=srcImage.width;
     destImage.data=malloc(sizeof(uint8_t)*destImage.width*destImage.bpp*destImage.height);
     convolute(&srcImage,&destImage,algorithms[type]);
+
+
+    gettimeofday(&end,NULL);
+    if (end.tv_usec >= start.tv_usec){
+        printf("time:%ld.%d",end.tv_sec-start.tv_sec,end.tv_usec-start.tv_usec);
+    }else{
+        printf("time:%ld.%d",end.tv_sec-start.tv_sec-1,1000000-end.tv_usec-start.tv_usec); 
+    }
     stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
     stbi_image_free(srcImage.data);
     
     free(destImage.data);
-    t2=time(NULL);
-    printf("Took %ld seconds\n",t2-t1);
    return 0;
 }
