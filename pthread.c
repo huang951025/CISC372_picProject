@@ -1,3 +1,7 @@
+#include <unistd.h>  //Header file for sleep(). man 3 sleep for details.
+#include <pthread.h>
+// A normal C function that is executed as a thread 
+// when its name is specified in pthread_create()
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/time.h>
@@ -10,6 +14,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+
 //An array of kernel matrices to be used for image convolution.  
 //The indexes of these match the enumeration from the header file. ie. algorithms[BLUR] returns the kernel corresponding to a box blur.
 Matrix algorithms[]={
@@ -21,14 +26,6 @@ Matrix algorithms[]={
     {{0,0,0},{0,1,0},{0,0,0}}
 };
 
-
-//getPixelValue - Computes the value of a specific pixel on a specific channel using the selected convolution kernel
-//Paramters: srcImage:  An Image struct populated with the image being convoluted
-//           x: The x coordinate of the pixel
-//          y: The y coordinate of the pixel
-//          bit: The color channel being manipulated
-//          algorithm: The 3x3 kernel matrix to use for the convolution
-//Returns: The new value for this x,y pixel and bit channel
 uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm){
     int px,mx,py,my,i,span;
     span=srcImage->width*srcImage->bpp;
@@ -51,23 +48,6 @@ uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm){
     return result;
 }
 
-//convolute:  Applies a kernel matrix to an image
-//Parameters: srcImage: The image being convoluted
-//            destImage: A pointer to a  pre-allocated (including space for the pixel array) structure to receive the convoluted image.  It should be the same size as srcImage
-//            algorithm: The kernel matrix to use for the convolution
-//Returns: Nothing
-void convolute(Image* srcImage,Image* destImage,Matrix algorithm){
-    int row,pix,bit,span;
-    span=srcImage->bpp*srcImage->bpp;
-    for (row=0;row<srcImage->height;row++){
-        for (pix=0;pix<srcImage->width;pix++){
-            for (bit=0;bit<srcImage->bpp;bit++){
-                destImage->data[Index(pix,row,srcImage->width,bit,srcImage->bpp)]=getPixelValue(srcImage,pix,row,bit,algorithm);
-            }
-        }
-    }
-}
-
 //Usage: Prints usage information for the program
 //Returns: -1
 int Usage(){
@@ -87,13 +67,37 @@ enum KernelTypes GetKernelType(char* type){
     else return IDENTITY;
 }
 
-//main:
-//argv is expected to take 2 arguments.  First is the source file name (can be jpg, png, bmp, tga).  Second is the lower case name of the algorithm.
-int main(int argc,char** argv){
+
+struct thd_arg{
+    int startrow;
+    int endrow;
+    Image *srcimage;
+    Image *destimage;
+    int type;
+} ;
+
+void *myThreadFun(void *arg)
+{
+    struct thd_arg *a = (struct thd_arg*)arg;
+    int row,pix,bit,span;
+    Image *srcImage = (*a).srcimage;
+    Image *destImage = (*a).destimage;
+    span=srcImage->bpp*srcImage->bpp;
+    for (row=(*a).startrow;row<(*a).endrow;row++){
+        for (pix=0;pix<srcImage->width;pix++){
+            for (bit=0;bit<srcImage->bpp;bit++){
+                destImage->data[Index(pix,row,srcImage->width,bit,srcImage->bpp)]=getPixelValue(srcImage,pix,row,bit,algorithms[(*a).type]);
+            }
+        }
+    }
+
+    return NULL;
+}
+
+int main(int argc,char** argv)
+{   
     struct timeval start, end;
     gettimeofday(&start,NULL);
-
-
     stbi_set_flip_vertically_on_load(0); 
     if (argc!=3) return Usage();
     char* fileName=argv[1];
@@ -112,7 +116,31 @@ int main(int argc,char** argv){
     destImage.height=srcImage.height;
     destImage.width=srcImage.width;
     destImage.data=malloc(sizeof(uint8_t)*destImage.width*destImage.bpp*destImage.height);
-    convolute(&srcImage,&destImage,algorithms[type]);
+
+    int thread_count = 4;
+    int i;
+    pthread_t thread_id [thread_count];
+    struct thd_arg thread_arg[thread_count];
+    int perjob = srcImage.height/thread_count;
+    printf("number of core:%d\n",thread_count);
+
+    for (i = 0; i < thread_count;i++){
+        thread_arg[i].srcimage = &srcImage;
+        thread_arg[i].destimage = &destImage;
+        thread_arg[i].type = type;
+        thread_arg[i].startrow = i*perjob;
+        if(i == thread_count-1){
+            thread_arg[i].endrow = srcImage.height;
+        }else{
+            thread_arg[i].endrow = (i+1)*perjob-1;
+        }
+    }
+    for (i = 0; i < thread_count;i++){
+        pthread_create(&thread_id[i], NULL, myThreadFun, &thread_arg[i]);
+    }
+    for (i = 0; i < thread_count;i++){
+        pthread_join(thread_id[i], NULL);
+    }
     gettimeofday(&end,NULL);
     if (end.tv_usec >= start.tv_usec){
         printf("time:%ld.%d",end.tv_sec-start.tv_sec,end.tv_usec-start.tv_usec);
@@ -122,7 +150,6 @@ int main(int argc,char** argv){
 
     stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
     stbi_image_free(srcImage.data);
-    
     free(destImage.data);
-   return 0;
+    return 0;
 }
