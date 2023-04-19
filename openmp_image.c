@@ -123,7 +123,7 @@ int main(int argc,char** argv){
     if (end.tv_usec >= start.tv_usec){
         printf("time:%ld.%d",end.tv_sec-start.tv_sec,end.tv_usec-start.tv_usec);
     }else{
-        printf("time:%ld.%d",end.tv_sec-start.tv_sec-1,1000000-end.tv_usec-start.tv_usec); 
+        printf("time:%ld.%d",end.tv_sec-start.tv_sec-1,1000000-end.tv_usec+start.tv_usec); 
     }
     stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
     stbi_image_free(srcImage.data);
